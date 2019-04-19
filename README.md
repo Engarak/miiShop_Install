@@ -7,4 +7,4 @@ v.0.1 - Install Script for miiShop
 + Version works for new install or upgrade
 + miiShop starts after install/upgrade immediately
 
-** Check [releases](https://github.com/Engarak/miiShop_Install/releases/) for instructions
+**Check [releases](https://github.com/Engarak/miiShop_Install/releases/) for instructions**
