@@ -8,12 +8,12 @@ function get-latestmiiShop ([String] $question,[String] $installType)
     if($installType.ToUpper() -eq 'UPGRADE')
     {        
         $file = "miiShop_upgrade-0_2_x-0_2_9.zip"        
-        $uoriDir = Get-Folder -displayMesage 'Where are the .cia files located?'
+        $uoriDir = Get-Folder -displayMesage 'Where is the miiShop.ps1 file located?'
     }
     else
     {
         $file = "miiShop_install-0_2_9.zip"
-        $uoriDir = Get-Folder -displayMesage 'Where is the miiShop.ps1 file located?'
+        $uoriDir = Get-Folder -displayMesage 'Where are the .cia files located?'
     }
 
     $releases = "https://api.github.com/repos/$repo/releases"
@@ -43,15 +43,47 @@ function get-latestmiiShop ([String] $question,[String] $installType)
     Get-ChildItem -Path $folder -Recurse |  Move-Item -Destination $uoriDir -Force
 
     # Removing temp files
-    Remove-Item $zip -Force
-    Remove-Item $folder -Recurse -Force
+    Remove-Item $zip -Force -ErrorAction SilentlyContinue
+    Remove-Item $folder -Recurse -Force -ErrorAction SilentlyContinue
     $filePath="$uoriDir\start.bat" 
-    set-location $uoriDir
+    $iconPath="$uoriDir\images\favicon.ico"
+    set-location $uoriDir 
     #$file = Get-ChildItem "$uoriDir\database\settings.csv" #for future upgrades force the settings file to get updated to force a rebuild
     #$file.LastWriteTime = Get-Date
-    Write-Output 'Upgrade/install completed, launching miiShop'
+    Write-Output 'Creating miiShop launch shortcut'
+    
+    <#
+        make shortcut to start.bat for miiShop and add icon
+    #>
+    new-shortcut -filePath $filePath -iconPath $iconPath
+
     Stop-Transcript
-    Invoke-Expression $filePath
+    #Invoke-Expression $filePath
+    
+    Write-Output 'Process completed, miiShop is installed/upgraded and a shortcut has been added to the desktop.'
+    pause | Out-Null
+}
+
+function new-shortcut
+{
+    param($filePath,$iconPath)
+    # Create a Shortcut with Windows PowerShell
+    $SourceFileLocation = $filePath
+    $desktop = ([Environment]::GetEnvironmentVariable("Public"))+"\Desktop"
+    $ShortcutLocation = "$desktop\Run miiShop.lnk"
+    #New-Object : Creates an instance of a Microsoft .NET Framework or COM object.
+    #-ComObject WScript.Shell: This creates an instance of the COM object that represents the WScript.Shell for invoke CreateShortCut
+    $WScriptShell = New-Object -ComObject WScript.Shell
+    $Shortcut = $WScriptShell.CreateShortcut($ShortcutLocation)
+    $Shortcut.TargetPath = $SourceFileLocation
+    $Shortcut.iconLocation = "$iconpath,0"
+    #Save the Shortcut to the TargetPath
+    $Shortcut.Save()
+
+    #Convert to "RUN AS ADMIN"
+    $bytes = [System.IO.File]::ReadAllBytes($ShortcutLocation)
+    $bytes[0x15] = $bytes[0x15] -bor 0x20 #set byte 21 (0x15) bit 6 (0x20) ON
+    [System.IO.File]::WriteAllBytes($ShortcutLocation, $bytes)
 }
 
 Function Get-Folder ([string]$displayMesage)
@@ -88,10 +120,10 @@ $result = $host.ui.PromptForChoice($title, $message, $Options, 0)
 Switch ($result)
      {
           0 { 
-                get-latestmiiShop -question 'Where is the miiShop.ps1 file located?'
+            get-latestmiiShop -question 'Where is the miiShop.ps1 file located?'    
            }
-          1 { 
-                get-latestmiiShop -question 'Where are your 3DS games (.cia files) located?'
+          1 {            
+            get-latestmiiShop -question 'Where are your 3DS games (.cia files) located?'
            }
 
      }
